@@ -7,18 +7,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/p4gefau1t/trojan-go/config"
+
 	// MySQL Driver
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/p4gefau1t/trojan-go/common"
-	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/log"
 	"github.com/p4gefau1t/trojan-go/statistic"
 	"github.com/p4gefau1t/trojan-go/statistic/memory"
 )
 
 const Name = "MYSQL"
-
+// connect db
 type Authenticator struct {
 	*memory.Authenticator
 	db             *sql.DB
@@ -29,39 +30,42 @@ type Authenticator struct {
 func (a *Authenticator) updater() {
 	for {
 		for _, user := range a.ListUsers() {
-			// swap upload and download for users
+			//swap upload and download for users
 			hash := user.Hash()
 			sent, recv := user.ResetTraffic()
-
-			s, err := a.db.Exec("UPDATE `users` SET `upload`=`upload`+?, `download`=`download`+? WHERE `password`=?;", recv, sent, hash)
-			if err != nil {
-				log.Error(common.NewError("failed to update data to user table").Base(err))
-				continue
-			}
-			if r, err := s.RowsAffected(); err != nil {
-				if r == 0 {
-					a.DelUser(hash)
+			timeUnix:=time.Now().Unix()
+			if sent > 5 {
+				s, err := a.db.Exec("UPDATE `user` SET `u`=`u`+?, `d`=`d`+?,  `t`=? WHERE SHA2( CONCAT(port,passwd), 224) =?;", recv, sent, timeUnix, hash)
+				if err != nil {
+					log.Error(common.NewError("failed to update data to user table").Base(err))
+					continue
 				}
+				if r, err := s.RowsAffected(); err != nil {
+					if r == 0 {
+						a.DelUser(hash)
+					}
+				}
+			//log.Info(sent)
 			}
 		}
 		log.Info("buffered data has been written into the database")
 
-		// update memory
-		rows, err := a.db.Query("SELECT password,quota,download,upload FROM users")
-		if err != nil || rows.Err() != nil {
+		//update memory
+		rows, err := a.db.Query("SELECT SHA2( CONCAT(port,passwd), 224) ,transfer_enable,d,u,enable FROM user")
+		if err != nil {
 			log.Error(common.NewError("failed to pull data from the database").Base(err))
 			time.Sleep(a.updateDuration)
 			continue
 		}
 		for rows.Next() {
 			var hash string
-			var quota, download, upload int64
-			err := rows.Scan(&hash, &quota, &download, &upload)
+			var transfer_enable, d, u, enable int64
+			err := rows.Scan(&hash, &transfer_enable, &d, &u, &enable)
 			if err != nil {
 				log.Error(common.NewError("failed to obtain data from the query result").Base(err))
 				break
 			}
-			if download+upload < quota || quota < 0 {
+			if d+u < transfer_enable && enable == 1 {
 				a.AddUser(hash)
 			} else {
 				a.DelUser(hash)
