@@ -79,6 +79,21 @@ func (u *User) GetIP() int {
 	return int(u.ipNum)
 }
 
+func (u *User) GetI() string {
+        val := ""
+        flag := true
+        u.ipTable.Range(func(key, value interface{}) bool {
+                if flag {
+                        flag = false
+                } else {
+                        val += ","
+                }
+                val += key.(string)
+                return true
+        })
+        return val
+}
+
 func (u *User) SetIPLimit(n int) {
 	u.maxIPNum = n
 }
