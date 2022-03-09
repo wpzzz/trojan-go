@@ -34,21 +34,47 @@ func (a *Authenticator) updater() {
 			hash := user.Hash()
 			sent, recv := user.ResetTraffic()
 			timeUnix:=time.Now().Unix()
-			if sent > 5 {
-				s, err := a.db.Exec("UPDATE `user` SET `u`=`u`+?, `d`=`d`+?,  `t`=? WHERE SHA2( CONCAT(port,passwd), 224) =?;", recv, sent, timeUnix, hash)
-				if err != nil {
-					log.Error(common.NewError("failed to update data to user table").Base(err))
-					continue
-				}
-				if r, err := s.RowsAffected(); err != nil {
-					if r == 0 {
-						a.DelUser(hash)
-					}
-				}
-			//log.Info(sent)
-			}
-		}
-		log.Info("buffered data has been written into the database")
+                        if sent > 10 {
+                                //log.Error(sent)
+                                user.SetIPLimit(5)
+                                var iips string
+                                ip := user.GetI()
+                                if len(ip) > 4 {
+                                        log.Error("current:" + ip)
+                                        //s, err := a.db.Exec("UPDATE `user` SET `u`=`u`+?, `d`=`d`+?,  `t`=?, `ip`=? WHERE  SHA2( CONCAT(port,passwd), 224) =?;", recv, sent, timeUnix, ip, hash)
+                                        err := a.db.QueryRow("SELECT `ip` FROM `user` WHERE  SHA2( CONCAT(port,passwd), 224) =? LIMIT 1;",hash).Scan(&iips)
+                                        if err != nil {
+                                                log.Error(common.NewError("failed to pull data from the database").Base(err))
+                                                time.Sleep(a.updateDuration)
+                                                continue
+                                        }
+
+                                        //var iips string
+                                        //s.Scan(&iips)
+                                        log.Error("getsqlip:" + iips)
+                                        var lip = strings.Split(ip, ",")
+                                        for i:= 0;i<len(lip);i++{
+                                                if !strings.Contains(iips, lip[i]) {
+                                                        iips = iips + lip[i] +" "
+                                                }
+                                        }
+                                        log.Error("outputip:" + iips)
+                                ss, err := a.db.Exec("UPDATE `user` SET `u`=`u`+?, `d`=`d`+?,  `t`=?, `ip`=? WHERE  SHA2( CONCAT(port,passwd), 224) =?;", recv, sent, timeUnix, iips, hash)
+                                if err != nil {
+                                        log.Error(common.NewError("failed to update data to user table").Base(err))
+                                        continue
+                                }
+
+                                if r, err := ss.RowsAffected(); err != nil {
+                                        if r == 0 {
+                                                a.DelUser(hash)
+                                        }
+                                }
+                                }
+                        }
+                }
+                log.Error("---mysql updated---")
+
 
 		//update memory
 		rows, err := a.db.Query("SELECT SHA2( CONCAT(port,passwd), 224) ,transfer_enable,d,u,enable FROM user")
