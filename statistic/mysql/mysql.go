@@ -37,6 +37,7 @@ func (a *Authenticator) updater() {
                         if sent > 10 {
                                 //log.Error(sent)
                                 user.SetIPLimit(5)
+				//user.SetIPLimit(104857600) 限速100M
                                 var iips string
                                 ip := user.GetI()
                                 if len(ip) > 4 {
