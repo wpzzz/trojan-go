@@ -79,7 +79,7 @@ func (u *User) GetIP() int {
 	return int(u.ipNum)
 }
 
-func (u *User) GetIIPs() string {
+func (u *User) GetIPs() string {
         val := ""
         flag := true
         u.ipTable.Range(func(key, value interface{}) bool {
