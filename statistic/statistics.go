@@ -26,7 +26,7 @@ type IPRecorder interface {
 	AddIP(string) bool
 	DelIP(string) bool
 	GetIP() int
-	GetI()  string
+	GetIPs()  string
 	SetIPLimit(int)
 	GetIPLimit() int
 }
