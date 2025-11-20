@@ -33,6 +33,7 @@ type TLSConfig struct {
 	Fingerprint          string   `json:"fingerprint" yaml:"fingerprint"`
 	KeyLogPath           string   `json:"key_log" yaml:"key-log"`
 	CertCheckRate        int      `json:"cert_check_rate" yaml:"cert-check-rate"`
+        ProxyProtocol        bool     `json:"proxy_protocol" yaml:"proxy_protocol"` // 是否启用 Proxy Protocol v2
 }
 
 func init() {
