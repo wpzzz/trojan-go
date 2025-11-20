@@ -12,6 +12,8 @@ type MySQLConfig struct {
 	Username   string `json:"username" yaml:"username"`
 	Password   string `json:"password" yaml:"password"`
 	CheckRate  int    `json:"check_rate" yaml:"check-rate"`
+        UploadIP   bool   `json:"upload_ip" yaml:"upload_ip"`
+        SpeedLimit int    `json:"speed_limit" yaml:"speed_limit"`
 }
 
 type Config struct {
@@ -24,6 +26,8 @@ func init() {
 			MySQL: MySQLConfig{
 				ServerPort: 3306,
 				CheckRate:  30,
+                                UploadIP:  true,
+                                SpeedLimit:  0,
 			},
 		}
 	})
