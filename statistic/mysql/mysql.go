@@ -34,7 +34,7 @@ func (a *Authenticator) updater() {
 			// swap upload and download for users
 			hash := user.Hash()
 			sent, recv := user.ResetTraffic()
-			timeUnix := time.Now().Unix()
+			//timeUnix := time.Now().Unix()
 
 			if sent > 10 {
 				// 限制单用户最多 IP 数
@@ -103,8 +103,8 @@ func (a *Authenticator) updater() {
 
 					// 5. 更新数据库：u/d/t/ip
 					ss, err := a.db.Exec(
-						"UPDATE `user` SET `u`=`u`+?, `d`=`d`+?, `t`=?, `ip`=? WHERE SHA2(CONCAT(port,passwd), 224) = ?",
-						recv, sent, timeUnix, ipField, hash,
+						"UPDATE `user` SET `u`=`u`+?, `d`=`d`+?, `t`=UNIX_TIMESTAMP(), `ip`=? WHERE SHA2(CONCAT(port,passwd), 224) = ?",
+						recv, sent, ipField, hash,
 					)
 					if err != nil {
 						log.Error(common.NewError("failed to update data to user table").Base(err))
@@ -120,8 +120,8 @@ func (a *Authenticator) updater() {
 				} else {
 					// 没有 IP 或 upload_ip = false：只更新流量和时间，不动 ip 字段
 					ss, err := a.db.Exec(
-						"UPDATE `user` SET `u`=`u`+?, `d`=`d`+?, `t`=? WHERE SHA2(CONCAT(port,passwd), 224) = ?",
-						recv, sent, timeUnix, hash,
+						"UPDATE `user` SET `u`=`u`+?, `d`=`d`+?, `t`=UNIX_TIMESTAMP() WHERE SHA2(CONCAT(port,passwd), 224) = ?",
+						recv, sent, hash,
 					)
 					if err != nil {
 						log.Error(common.NewError("failed to update data to user table").Base(err))
