@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+        "strings"
 
 	"golang.org/x/time/rate"
 
@@ -46,6 +47,7 @@ func (u *User) Close() error {
 	return nil
 }
 
+/*
 func (u *User) AddIP(ip string) bool {
 	if u.maxIPNum <= 0 {
 		return true
@@ -60,6 +62,25 @@ func (u *User) AddIP(ip string) bool {
 	u.ipTable.Store(ip, true)
 	atomic.AddInt32(&u.ipNum, 1)
 	return true
+}
+*/
+func (u *User) AddIP(ip string) bool {
+    // 1. 先看是不是已经存在
+    if _, found := u.ipTable.Load(ip); found {
+        return true
+    }
+
+    // 2. 如果设置了最大 IP 数（>0），就检查上限
+    if u.maxIPNum > 0 {
+        if int(u.ipNum)+1 > u.maxIPNum {
+            return false
+        }
+    }
+
+    // 3. 记录 IP + 计数
+    u.ipTable.Store(ip, true)
+    atomic.AddInt32(&u.ipNum, 1)
+    return true
 }
 
 func (u *User) DelIP(ip string) bool {
@@ -79,6 +100,7 @@ func (u *User) GetIP() int {
 	return int(u.ipNum)
 }
 
+/*
 func (u *User) GetIPs() string {
         val := ""
         flag := true
@@ -92,6 +114,29 @@ func (u *User) GetIPs() string {
                 return true
         })
         return val
+}
+*/
+func (u *User) GetIPs() string {
+    var b strings.Builder
+    first := true
+
+    u.ipTable.Range(func(key, value interface{}) bool {
+        s, ok := key.(string)
+        if !ok || s == "" {
+            return true
+        }
+
+        if !first {
+            b.WriteByte(',')
+        } else {
+            first = false
+        }
+
+        b.WriteString(s)
+        return true
+    })
+
+    return b.String()
 }
 
 func (u *User) SetIPLimit(n int) {

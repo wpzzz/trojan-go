@@ -49,6 +49,7 @@ type Server struct {
 	underlay           tunnel.Server
 	nextHTTP           int32
 	portOverrider      map[string]int
+        useProxyProtocol   bool
 }
 
 func (s *Server) Close() error {
@@ -80,6 +81,16 @@ func (s *Server) acceptLoop() {
 			return
 		}
 		go func(conn net.Conn) {
+                       // 如果启用 Proxy Protocol，则先解析 v2 头
+                       if s.useProxyProtocol {
+                                pc, err := parseProxyProtocolV2(conn)
+                                if err != nil {
+                                        log.Error(common.NewError("failed to parse proxy protocol v2").Base(err))
+                                        conn.Close()
+                                        return
+                                }
+                                conn = pc // 替换成带真实 RemoteAddr 的连接
+                        }
 			tlsConfig := &tls.Config{
 				CipherSuites:             s.cipherSuite,
 				PreferServerCipherSuites: s.PreferServerCipher,
@@ -355,6 +366,7 @@ func NewServer(ctx context.Context, underlay tunnel.Server) (*Server, error) {
 		cipherSuite:        cipherSuite,
 		ctx:                ctx,
 		cancel:             cancel,
+                useProxyProtocol:   cfg.TLS.ProxyProtocol,
 	}
 
 	go server.acceptLoop()
